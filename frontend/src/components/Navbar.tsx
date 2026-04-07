@@ -3,12 +3,12 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, BarChart3, Lightbulb } from "lucide-react";
+import { Activity, BarChart3, HelpCircle, MapPin } from "lucide-react";
 
 const links = [
-  { href: "/",          label: "Explorer",  icon: Activity  },
-  { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/insights",  label: "Insights",  icon: Lightbulb },
+  { href: "/",          label: "City Search",  icon: MapPin     },
+  { href: "/analytics", label: "Forecast",     icon: BarChart3  },
+  { href: "/insights",  label: "Learn",        icon: HelpCircle },
 ];
 
 export const Navbar = () => {

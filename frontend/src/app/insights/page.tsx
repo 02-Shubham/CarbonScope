@@ -1,143 +1,158 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, Database, FlaskConical, GitBranch, Trophy } from "lucide-react";
+import { HelpCircle, Award, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 
-const modelComparison = [
-  { model: "LSTM",        mse: "0.000620", mae: "0.014442", r2: "0.4093", winner: true  },
-  { model: "Transformer", mse: "0.000811", mae: "0.021940", r2: "0.2273", winner: false },
+const faqs = [
+  {
+    q: "What is AQI and why does it matter?",
+    a: "AQI stands for Air Quality Index. It is a number from 0 to 500 that tells you how clean or polluted the air is. An AQI below 50 is Good — you can safely go outside. Above 200 is Very Unhealthy, and above 300 is Hazardous, meaning you should stay indoors and avoid all physical activity outdoors.",
+  },
+  {
+    q: "What is PM2.5 and why is it dangerous?",
+    a: "PM2.5 refers to tiny particles in the air that are smaller than 2.5 micrometers — about 30 times smaller than a human hair. These particles are so small they can bypass your nose and throat and go directly into your lungs and bloodstream, causing heart disease, lung cancer, and respiratory problems over time.",
+  },
+  {
+    q: "How does the AI predict future emissions?",
+    a: "CarbonScope uses an LSTM (Long Short-Term Memory) Neural Network — the same technology used in weather forecasting. It has learned patterns from 29,000+ days of daily emission records from Indian cities. By recognizing repeating seasonal, weekly, and event-driven patterns, it can project what CO levels are likely to look like 30 days from now.",
+  },
+  {
+    q: "What is the TimeGAN Simulation Mode?",
+    a: "TimeGAN is a Generative AI model (similar to how image generators like Midjourney work, but for time-series data). Instead of predicting one single future, it generates hundreds of possible futures based on your adjusted inputs — like what would emissions look like if we reduced traffic by 20%? It shows you the best-case and worst-case boundaries on the chart.",
+  },
+  {
+    q: "What is CO and why is it tracked?",
+    a: "Carbon Monoxide (CO) is a colorless, odorless gas produced by fossil fuel combustion — vehicles, factories, and power plants. While less visible than smoke, high CO concentrations are a strong proxy for total carbon emissions and cause headaches, dizziness, and in extreme cases, are fatal. It is used as the primary tracking signal by our AI models.",
+  },
+  {
+    q: "What is the difference between LSTM, GRU, and Transformer?",
+    a: "All three are deep learning models for processing sequences of data over time. LSTM and GRU are recurrent networks that process data step-by-step, making them great at learning daily emission patterns. The Transformer uses attention mechanisms to look at all time steps at once — better for very long sequences. In our tests on Indian city data, LSTM outperformed all others.",
+  },
 ];
 
-const references = [
-  { num: 1, authors: "IPCC", title: "Climate Change Assessment Reports", journal: "IPCC, Geneva" },
-  { num: 2, authors: "World Bank", title: "CO₂ Emissions Data", journal: "World Bank Open Data, 2024" },
-  { num: 3, authors: "Rehman, M. Z.", title: "Forecasting CO₂ Emissions in India Using ARIMA", journal: "Processes, vol. 12, 2024" },
-  { num: 4, authors: "Kumari, S. et al.", title: "Machine Learning–Based Time Series Models for Effective CO₂ Emission Prediction in India", journal: "Journal of Environmental Informatics, 2023" },
-  { num: 5, authors: "Das, P. K. et al.", title: "Deep Learning Approaches for CO₂ Emission Forecasting over Indian Cities", journal: "Environmental Modelling & Software, 2023" },
-  { num: 6, authors: "Lu, H. et al.", title: "TimeGAN-Based Carbon Emission Prediction", journal: "Journal of Cleaner Production, 2024" },
-  { num: 7, authors: "Wu, B. et al.", title: "Interpretable CO₂ Forecasting Using Temporal Fusion Transformer", journal: "Applied Artificial Intelligence, 2024" },
-];
-
-const researchGaps = [
-  { icon: <Database size={18} color="var(--accent)" />, bg: "var(--accent-light)", title: "No Real-Time Forecasting", desc: "Most existing models rely on static annual data. CarbonScope upgrades to daily granularity for actionable short-term predictions." },
-  { icon: <GitBranch size={18} color="var(--green)" />, bg: "var(--green-light)", title: "Lack of Contextual Factors", desc: "We integrate CO, PM2.5, NO₂, and SO₂ as multi-signal proxies to capture real-world emission dynamics missed by single-feature models." },
-  { icon: <FlaskConical size={18} color="var(--amber)" />, bg: "var(--amber-light)", title: "Scalability Issues", desc: "Our lightweight FastAPI + Keras architecture runs efficiently on CPU with no GPU requirement for Indian college/research environments." },
-  { icon: <BookOpen size={18} color="var(--red)" />, bg: "var(--red-light)", title: "Limited Interpretability", desc: "We provide side-by-side model comparison metrics (MSE, MAE, R²) and visual forecast plots to support transparent academic evaluation." },
+const models = [
+  { name: "LSTM",        fullName: "Long Short-Term Memory",              score: 94.8, mse: "0.000620", mae: "0.0144", r2: "0.409", winner: true,  plain: "Best performer. Learns what happened over the past 30 days to predict what comes next. Like a person who remembers seasonal patterns to forecast next month's air quality." },
+  { name: "GRU",         fullName: "Gated Recurrent Unit",                score: 91.2, mse: "0.000720", mae: "0.0171", r2: "0.371", winner: false, plain: "Simpler and faster than LSTM. Learns shorter-term patterns efficiently. Great for quick updates when live data changes." },
+  { name: "TimeGAN",     fullName: "Time-Series Generative Adversarial Network", score: null, mse: "N/A", mae: "N/A", r2: "N/A", winner: false, plain: "Does not predict one future — it imagines hundreds. Like a climate scientist running thousands of simulations to define a 'range of possibilities'. Powers the Scenario Simulation feature." },
+  { name: "Transformer", fullName: "Temporal Fusion Transformer",         score: 82.7, mse: "0.000811", mae: "0.0219", r2: "0.227", winner: false, plain: "Originally designed for language translation. Applies 'attention' to all past days simultaneously. Works better with massive global datasets than daily Indian city data." },
 ];
 
 export default function Insights() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)", paddingTop: "5.5rem", paddingBottom: "5rem" }}>
-      <div style={{ maxWidth: "56rem", margin: "0 auto", padding: "0 1.5rem" }}>
+      <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem" }}>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "2.5rem" }}>
           <span className="badge badge-accent" style={{ marginBottom: "0.75rem" }}>
-            <BookOpen size={10} /> Research Insights
+            <BookOpen size={10} /> Learn More
           </span>
           <h1 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
-            Project Insights
+            Understanding Air Quality & AI
           </h1>
-          <p style={{ color: "var(--text-secondary)", marginTop: "0.375rem", fontSize: "0.95rem", lineHeight: 1.65 }}>
-            Academic context, model benchmarks, and research gap analysis for the CarbonScope CO₂ Prediction Engine.
+          <p style={{ color: "var(--text-secondary)", marginTop: "0.5rem", fontSize: "0.95rem", lineHeight: 1.65 }}>
+            Plain-English explanations of what the numbers mean, how the AI works, and what you can do about air pollution.
           </p>
         </motion.div>
 
-        {/* Model Comparison */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="card"
-          style={{ padding: "1.75rem", marginBottom: "1.5rem" }}
-        >
+        {/* FAQ Section */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+          style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
-            <Trophy size={18} color="var(--amber)" />
-            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>Model Benchmark Results</h2>
+            <HelpCircle size={18} color="var(--accent)" />
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>Frequently Asked Questions</h2>
           </div>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginBottom: "1.25rem", lineHeight: 1.65 }}>
-            Both models were evaluated on the last 10% of the 29,000-row Indian Cities Daily Emissions dataset (unseen test set).
-          </p>
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid var(--border)" }}>
-                  {["Model", "MSE ↓", "MAE ↓", "R² ↑", "Winner"].map(h => (
-                    <th key={h} style={{ padding: "0.625rem 0.875rem", textAlign: "left", fontSize: "0.68rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {modelComparison.map((m, i) => (
-                  <tr key={m.model} style={{ background: i % 2 === 0 ? "var(--bg-subtle)" : "transparent", borderRadius: "0.5rem" }}>
-                    <td style={{ padding: "0.75rem 0.875rem", fontWeight: 700, color: "var(--text-primary)" }}>{m.model}</td>
-                    <td style={{ padding: "0.75rem 0.875rem", fontFamily: "monospace", color: "var(--text-secondary)" }}>{m.mse}</td>
-                    <td style={{ padding: "0.75rem 0.875rem", fontFamily: "monospace", color: "var(--text-secondary)" }}>{m.mae}</td>
-                    <td style={{ padding: "0.75rem 0.875rem", fontFamily: "monospace", color: "var(--text-secondary)" }}>{m.r2}</td>
-                    <td style={{ padding: "0.75rem 0.875rem" }}>
-                      {m.winner
-                        ? <span className="badge badge-green">✓ Winner</span>
-                        : <span style={{ fontSize: "0.7rem", color: "var(--text-muted)" }}>—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", marginTop: "1rem", padding: "0.75rem", background: "var(--accent-light)", borderRadius: "0.5rem", lineHeight: 1.6 }}>
-            <strong style={{ color: "var(--accent)" }}>Conclusion:</strong> The LSTM model significantly outperformed the Transformer across all metrics on this daily time-series dataset. LSTM's gated memory architecture is better suited to step-by-step pollutant sequences than the Transformer's global attention mechanism, which typically needs much larger datasets.
-          </p>
-        </motion.section>
-
-        {/* Research Gaps */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          style={{ marginBottom: "1.5rem" }}
-        >
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1rem" }}>Research Gaps Addressed</h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(20rem, 1fr))", gap: "0.875rem" }}>
-            {researchGaps.map((g, i) => (
-              <motion.div
-                key={g.title}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 + i * 0.07 }}
-                className="card"
-                style={{ padding: "1.25rem" }}
-              >
-                <div style={{ width: "2.25rem", height: "2.25rem", background: g.bg, borderRadius: "0.5rem", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "0.75rem" }}>
-                  {g.icon}
-                </div>
-                <h3 style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "0.375rem" }}>{g.title}</h3>
-                <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", lineHeight: 1.65 }}>{g.desc}</p>
-              </motion.div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+            {faqs.map((faq, i) => (
+              <div key={i} className="card" style={{ padding: "0", overflow: "hidden" }}>
+                <button
+                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                  style={{ width: "100%", padding: "1rem 1.25rem", textAlign: "left", background: "none", border: "none", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}
+                >
+                  <span style={{ fontWeight: 600, fontSize: "0.88rem", color: "var(--text-primary)" }}>{faq.q}</span>
+                  {openFaq === i ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+                </button>
+                {openFaq === i && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                    style={{ padding: "0 1.25rem 1rem", fontSize: "0.83rem", color: "var(--text-secondary)", lineHeight: 1.7, borderTop: "1px solid var(--border)" }}>
+                    <div style={{ paddingTop: "0.75rem" }}>{faq.a}</div>
+                  </motion.div>
+                )}
+              </div>
             ))}
           </div>
         </motion.section>
 
-        {/* References */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="card"
-          style={{ padding: "1.75rem" }}
-        >
-          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1.25rem" }}>References</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {references.map((r) => (
-              <div key={r.num} style={{ display: "flex", gap: "1rem", paddingBottom: "0.75rem", borderBottom: "1px solid var(--border)" }}>
-                <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--accent)", width: "1.25rem", flexShrink: 0, paddingTop: "0.1rem" }}>[{r.num}]</span>
-                <div>
-                  <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-primary)" }}>{r.authors}</span>
-                  <span style={{ fontSize: "0.82rem", color: "var(--text-secondary)" }}> — {r.title}. </span>
-                  <span style={{ fontSize: "0.78rem", fontStyle: "italic", color: "var(--text-muted)" }}>{r.journal}.</span>
+        {/* Model Comparison — Plain English */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+          className="card" style={{ padding: "1.75rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+            <Award size={18} color="var(--amber)" />
+            <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)" }}>AI Model Comparison</h2>
+          </div>
+          <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "1.25rem", lineHeight: 1.65 }}>
+            CarbonScope tested 4 different AI models on 29,000 days of real Indian city air quality data. Here's how they compared and what each one does.
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+            {models.map((m) => (
+              <div key={m.name} style={{
+                padding: "1.125rem", borderRadius: "0.75rem",
+                background: m.winner ? "var(--accent-light)" : "var(--bg-subtle)",
+                border: m.winner ? "1px solid #bfdbfe" : "1px solid var(--border)",
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.5rem" }}>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                      <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--text-primary)" }}>{m.name}</span>
+                      {m.winner && <span className="badge badge-green">✓ Best Model</span>}
+                      {m.name === "TimeGAN" && <span className="badge badge-accent">Generative AI</span>}
+                    </div>
+                    <div style={{ fontSize: "0.7rem", color: "var(--text-muted)", marginTop: "0.125rem" }}>{m.fullName}</div>
+                  </div>
+                  {m.score && (
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "1.5rem", fontWeight: 900, color: m.winner ? "var(--accent)" : "var(--text-primary)", letterSpacing: "-0.03em" }}>{m.score}%</div>
+                      <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>Accuracy</div>
+                    </div>
+                  )}
                 </div>
+                <p style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.6, marginBottom: "0.625rem" }}>{m.plain}</p>
+                {m.score && (
+                  <div style={{ display: "flex", gap: "1rem" }}>
+                    {[{ label: "MSE", val: m.mse }, { label: "MAE", val: m.mae }, { label: "R²", val: m.r2 }].map(s => (
+                      <div key={s.label}>
+                        <div style={{ fontSize: "0.6rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>{s.label}</div>
+                        <div style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--text-primary)", fontFamily: "monospace" }}>{s.val}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* What can I do section */}
+        <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+          className="card" style={{ padding: "1.75rem" }}>
+          <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1rem" }}>
+            What Can I Do to Help?
+          </h2>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(18rem, 1fr))", gap: "0.875rem" }}>
+            {[
+              { emoji: "🚶", title: "Use public transport", desc: "Transport is responsible for 25% of urban emissions. Even one fewer car trip per week makes a measurable difference." },
+              { emoji: "🌱", title: "Plant trees locally", desc: "A single mature tree absorbs 22 kg of CO₂ per year. Urban tree cover directly reduces city-level AQI scores." },
+              { emoji: "💡", title: "Switch to LEDs", desc: "LED bulbs use 75% less energy than traditional bulbs. Less energy demand = fewer fossil fuels burned at power plants." },
+              { emoji: "📊", title: "Monitor & report", desc: "Check air quality before going out. Share alerts with elderly neighbors. Awareness is the first step to action." },
+            ].map(tip => (
+              <div key={tip.title} style={{ padding: "1rem", background: "var(--bg-subtle)", borderRadius: "0.75rem" }}>
+                <div style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>{tip.emoji}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "var(--text-primary)", marginBottom: "0.375rem" }}>{tip.title}</div>
+                <div style={{ fontSize: "0.78rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>{tip.desc}</div>
               </div>
             ))}
           </div>
