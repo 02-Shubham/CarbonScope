@@ -6,8 +6,8 @@ import { Navbar } from "@/components/Navbar";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "CarbonScope | Real-Time CO₂ & Climate Prediction",
-  description: "Monitor global carbon emissions and predict future trends with AI-powered insights.",
+  title: "CarbonScope | AI CO₂ Emission Prediction",
+  description: "Monitor and predict Indian carbon emissions with state-of-the-art LSTM and Transformer deep learning models.",
 };
 
 export default function RootLayout({
@@ -16,8 +16,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
-      <body className={`${inter.className} min-h-full bg-background text-foreground antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      </head>
+      <body className={inter.className} suppressHydrationWarning>
         <Navbar />
         {children}
       </body>
