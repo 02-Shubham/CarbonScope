@@ -1,153 +1,296 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight, MapPin, Search, Wind, Droplets, Thermometer, AlertTriangle, CheckCircle, Activity } from "lucide-react";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, X, MapPin, Wind, Droplets, AlertTriangle, CheckCircle, TrendingUp, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import type { CityMapData } from "@/components/LiveMap";
 
-const LiveMap = dynamic(() => import("@/components/LiveMap"), { ssr: false, loading: () => (
-  <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
-    <div style={{ fontSize: "0.85rem", color: "#94a3b8" }}>Loading map…</div>
-  </div>
-) });
+const LiveMap = dynamic(() => import("@/components/LiveMap"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f5f9" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🗺️</div>
+        <div style={{ fontSize: "0.85rem", color: "#94a3b8", fontWeight: 600 }}>Loading India Emission Map…</div>
+      </div>
+    </div>
+  ),
+});
 
-const CITY_DATA: Record<string, { pm25: number; co: number; no2: number; aqi: number; status: "Good"|"Moderate"|"Unhealthy"|"Hazardous"; trend: string }> = {
-  "Delhi":     { pm25: 145.2, co: 58.1, no2: 42.3, aqi: 312, status: "Hazardous",  trend: "↑ 8.2% this week"  },
-  "Mumbai":    { pm25: 85.4,  co: 44.2, no2: 28.1, aqi: 168, status: "Unhealthy",  trend: "↓ 2.1% this week"  },
-  "Pune":      { pm25: 54.1,  co: 38.9, no2: 18.5, aqi: 121, status: "Unhealthy",  trend: "→ Stable"          },
-  "Bengaluru": { pm25: 38.2,  co: 30.1, no2: 12.4, aqi: 84,  status: "Moderate",   trend: "↓ 4.3% this week"  },
-  "Chennai":   { pm25: 42.1,  co: 31.5, no2: 15.3, aqi: 92,  status: "Moderate",   trend: "↑ 1.2% this week"  },
-  "Kolkata":   { pm25: 110.5, co: 52.3, no2: 35.6, aqi: 214, status: "Unhealthy",  trend: "↑ 5.7% this week"  },
-  "Hyderabad": { pm25: 49.8,  co: 35.7, no2: 17.1, aqi: 108, status: "Moderate",   trend: "→ Stable"          },
-  "Ahmedabad": { pm25: 92.0,  co: 47.0, no2: 30.2, aqi: 182, status: "Unhealthy",  trend: "↑ 3.8% this week"  },
-};
+const ALL_CITIES = [
+  "Delhi", "Mumbai", "Pune", "Bengaluru", "Chennai",
+  "Kolkata", "Hyderabad", "Ahmedabad", "Lucknow", "Patna",
+  "Jaipur", "Surat", "Nagpur", "Bhopal", "Chandigarh", "Kochi",
+];
 
-const AQI_COLORS = {
-  "Good":      { color: "#059669", bg: "#d1fae5", icon: <CheckCircle size={18} color="#059669" /> },
-  "Moderate":  { color: "#d97706", bg: "#fef3c7", icon: <Wind size={18} color="#d97706" /> },
-  "Unhealthy": { color: "#dc2626", bg: "#fee2e2", icon: <AlertTriangle size={18} color="#dc2626" /> },
-  "Hazardous": { color: "#7c3aed", bg: "#ede9fe", icon: <AlertTriangle size={18} color="#7c3aed" /> },
+// Extended city detail data — mirrors what LiveMap knows
+const CITY_DETAILS: Record<string, { aqi: number; co: number; no2: number; advice: string; status: string; statusColor: string }> = {
+  "Delhi":      { aqi: 312, co: 58.1, no2: 42.3, status: "Hazardous",  statusColor: "#7c3aed", advice: "Stay indoors. Use air purifiers. Avoid all outdoor activity." },
+  "Mumbai":     { aqi: 168, co: 44.2, no2: 28.1, status: "Unhealthy",  statusColor: "#dc2626", advice: "Limit prolonged outdoor exertion. Wear N95 mask if going out." },
+  "Pune":       { aqi: 121, co: 38.9, no2: 18.5, status: "Unhealthy",  statusColor: "#dc2626", advice: "Sensitive groups should avoid outdoor activity. Monitor daily." },
+  "Bengaluru":  { aqi: 84,  co: 30.1, no2: 12.4, status: "Moderate",   statusColor: "#d97706", advice: "Generally safe. Light outdoor activity is fine. Keep windows open." },
+  "Chennai":    { aqi: 92,  co: 31.5, no2: 15.3, status: "Moderate",   statusColor: "#d97706", advice: "Acceptable. Monitor if you have asthma or heart conditions." },
+  "Kolkata":    { aqi: 214, co: 52.3, no2: 35.6, status: "Unhealthy",  statusColor: "#dc2626", advice: "Everyone may experience health effects. Avoid outdoor exercise." },
+  "Hyderabad":  { aqi: 108, co: 35.7, no2: 17.1, status: "Moderate",   statusColor: "#d97706", advice: "Sensitive individuals should moderate activity." },
+  "Ahmedabad":  { aqi: 182, co: 47.0, no2: 30.2, status: "Unhealthy",  statusColor: "#dc2626", advice: "Limit outdoor time. Children and elderly should stay inside." },
+  "Lucknow":    { aqi: 276, co: 55.2, no2: 39.8, status: "Hazardous",  statusColor: "#7c3aed", advice: "Hazardous conditions. Avoid going outdoors if possible." },
+  "Patna":      { aqi: 289, co: 56.8, no2: 41.2, status: "Hazardous",  statusColor: "#7c3aed", advice: "Very dangerous air. Keep children and elderly strictly indoors." },
+  "Jaipur":     { aqi: 154, co: 42.1, no2: 24.6, status: "Unhealthy",  statusColor: "#dc2626", advice: "Unhealthy for sensitive groups. Limit time outdoors." },
+  "Surat":      { aqi: 141, co: 40.3, no2: 22.9, status: "Unhealthy",  statusColor: "#dc2626", advice: "Sensitive people should avoid prolonged outdoor exposure." },
+  "Nagpur":     { aqi: 127, co: 39.0, no2: 20.1, status: "Unhealthy",  statusColor: "#dc2626", advice: "Air quality is unhealthy for sensitive individuals." },
+  "Bhopal":     { aqi: 118, co: 37.5, no2: 18.8, status: "Unhealthy",  statusColor: "#dc2626", advice: "Monitor air quality. Limit strenuous outdoor activity." },
+  "Chandigarh": { aqi: 172, co: 45.1, no2: 29.3, status: "Unhealthy",  statusColor: "#dc2626", advice: "Unhealthy air. Consider wearing a mask outdoors." },
+  "Kochi":      { aqi: 62,  co: 27.4, no2: 10.2, status: "Moderate",   statusColor: "#d97706", advice: "Generally good air quality. Enjoy outdoor activities." },
 };
 
 export default function Home() {
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [query, setQuery]               = useState("");
+  const [suggestions, setSuggestions]   = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState<CityMapData | null>(null);
+  const [flyTo, setFlyTo]               = useState<string | null>(null);
 
-  useEffect(() => {
-    if (query.length < 2) { setSuggestions([]); return; }
-    setSuggestions(Object.keys(CITY_DATA).filter(c => c.toLowerCase().includes(query.toLowerCase())));
-  }, [query]);
+  const handleSearch = (q: string) => {
+    setQuery(q);
+    if (q.length < 1) { setSuggestions([]); return; }
+    setSuggestions(ALL_CITIES.filter(c => c.toLowerCase().includes(q.toLowerCase())));
+  };
 
-  const cityInfo = selected ? CITY_DATA[selected] : null;
-  const statusStyle = cityInfo ? AQI_COLORS[cityInfo.status] : null;
+  const handleCityPick = (cityName: string) => {
+    setQuery(cityName);
+    setSuggestions([]);
+    setFlyTo(cityName);
+    // Build a synthetic CityMapData to populate the panel
+    const d = CITY_DETAILS[cityName];
+    if (d) {
+      setSelectedCity({
+        city: cityName,
+        latitude: 0, longitude: 0,
+        pm25: d.aqi / 2.5, // approximate
+        status: d.aqi > 200 ? "critical" : d.aqi > 100 ? "warning" : "safe",
+      });
+    }
+  };
+
+  const handleMapCitySelect = (node: CityMapData) => {
+    setSelectedCity(node);
+    setQuery(node.city);
+    setSuggestions([]);
+  };
+
+  const details = selectedCity ? CITY_DETAILS[selectedCity.city] : null;
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--bg)" }}>
+    <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden" }}>
 
-      {/* ── Hero ── */}
-      <section style={{ padding: "7rem 1.5rem 3rem", textAlign: "center", maxWidth: "52rem", margin: "0 auto" }}>
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          <span className="badge badge-accent" style={{ marginBottom: "1.25rem" }}>
-            <Activity size={10} /> Live Air Quality · India
-          </span>
-          <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.1, color: "var(--text-primary)", marginBottom: "1rem" }}>
-            Check Your City's <span style={{ background: "linear-gradient(135deg, #2563eb, #06b6d4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Air Quality</span> Right Now
-          </h1>
-          <p style={{ fontSize: "1rem", color: "var(--text-secondary)", lineHeight: 1.7, marginBottom: "2rem" }}>
-            Real-time PM2.5, CO and NO₂ levels for major Indian cities, powered by AI-driven forecasting.
-          </p>
-        </motion.div>
+      {/* ── Full-Screen Map ── */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
+        <LiveMap onCitySelect={handleMapCitySelect} selectedCity={flyTo} />
+      </div>
 
-        {/* Search bar */}
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          style={{ position: "relative", maxWidth: "32rem", margin: "0 auto 2.5rem" }}>
-          <div style={{ display: "flex", alignItems: "center", background: "#fff", border: "2px solid var(--border)", borderRadius: "0.875rem", padding: "0.75rem 1rem", boxShadow: "var(--shadow-md)", gap: "0.625rem" }}>
-            <Search size={18} color="var(--text-muted)" />
-            <input
-              type="text"
-              placeholder="Search your city — Delhi, Mumbai, Pune…"
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: "0.9rem", color: "var(--text-primary)", background: "transparent" }}
-            />
-            {query && <button onClick={() => { setQuery(""); setSelected(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: "1rem" }}>✕</button>}
-          </div>
+      {/* ── Floating Search Bar ── */}
+      <div style={{
+        position: "absolute", top: "6rem", left: "50%", transform: "translateX(-50%)",
+        zIndex: 100, width: "min(480px, calc(100vw - 2rem))",
+      }}>
+        <div style={{
+          background: "rgba(255,255,255,0.95)", backdropFilter: "blur(12px)",
+          border: "1px solid #e2e8f0", borderRadius: "1rem",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+          padding: "0.875rem 1rem",
+          display: "flex", alignItems: "center", gap: "0.625rem",
+        }}>
+          <Search size={18} color="#94a3b8" style={{ flexShrink: 0 }} />
+          <input
+            type="text"
+            value={query}
+            onChange={e => handleSearch(e.target.value)}
+            placeholder="Search any Indian city — Delhi, Pune, Kolkata…"
+            style={{
+              flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: "0.9rem", color: "#0f172a",
+            }}
+          />
+          {query && (
+            <button onClick={() => { setQuery(""); setSuggestions([]); setSelectedCity(null); setFlyTo(null); }}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", lineHeight: 1 }}>
+              <X size={16} />
+            </button>
+          )}
+        </div>
 
-          {/* Suggestions dropdown */}
+        {/* Suggestions dropdown */}
+        <AnimatePresence>
           {suggestions.length > 0 && (
-            <div style={{ position: "absolute", top: "calc(100% + 0.5rem)", left: 0, right: 0, background: "#fff", border: "1px solid var(--border)", borderRadius: "0.75rem", boxShadow: "var(--shadow-md)", zIndex: 100, overflow: "hidden" }}>
-              {suggestions.map(city => (
-                <button key={city} onClick={() => { setSelected(city); setQuery(city); setSuggestions([]); }}
-                  style={{ width: "100%", padding: "0.75rem 1rem", textAlign: "left", background: "none", border: "none", cursor: "pointer", fontSize: "0.85rem", color: "var(--text-primary)", display: "flex", alignItems: "center", gap: "0.5rem", borderBottom: "1px solid var(--border)" }}>
-                  <MapPin size={14} color="var(--accent)" /> {city}
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              style={{
+                marginTop: "0.375rem", background: "rgba(255,255,255,0.97)", backdropFilter: "blur(12px)",
+                border: "1px solid #e2e8f0", borderRadius: "0.875rem",
+                boxShadow: "0 8px 24px rgba(0,0,0,0.10)", overflow: "hidden",
+              }}>
+              {suggestions.slice(0, 6).map((city, i) => (
+                <button key={city} onClick={() => handleCityPick(city)}
+                  style={{
+                    width: "100%", padding: "0.75rem 1rem", textAlign: "left",
+                    background: "none", border: "none", borderBottom: i < suggestions.length - 1 ? "1px solid #f1f5f9" : "none",
+                    cursor: "pointer", fontSize: "0.85rem", color: "#0f172a",
+                    display: "flex", alignItems: "center", gap: "0.5rem",
+                  }}>
+                  <MapPin size={13} color="#2563eb" />
+                  <span style={{ fontWeight: 500 }}>{city}</span>
+                  <span style={{
+                    marginLeft: "auto", fontSize: "0.65rem", fontWeight: 700, padding: "0.15rem 0.5rem",
+                    borderRadius: "9999px",
+                    background: CITY_DETAILS[city]?.aqi > 200 ? "#ede9fe" : CITY_DETAILS[city]?.aqi > 100 ? "#fee2e2" : "#d1fae5",
+                    color: CITY_DETAILS[city]?.aqi > 200 ? "#7c3aed" : CITY_DETAILS[city]?.aqi > 100 ? "#dc2626" : "#059669",
+                  }}>
+                    AQI {CITY_DETAILS[city]?.aqi ?? "—"}
+                  </span>
                 </button>
               ))}
-            </div>
+            </motion.div>
           )}
-        </motion.div>
+        </AnimatePresence>
 
-        {/* City Result Card */}
-        {cityInfo && statusStyle && (
-          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-            className="card" style={{ padding: "1.75rem", maxWidth: "36rem", margin: "0 auto 2.5rem", textAlign: "left" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
+        {/* Pro tip when no city selected */}
+        {!selectedCity && !query && (
+          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+            style={{ textAlign: "center", marginTop: "0.75rem", fontSize: "0.72rem", color: "rgba(255,255,255,0.9)", fontWeight: 600, textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+            🗺️ Or click any glowing city node on the map below
+          </motion.p>
+        )}
+      </div>
+
+      {/* ── City Detail Panel (slides in from right) ── */}
+      <AnimatePresence>
+        {selectedCity && details && (
+          <motion.div
+            key={selectedCity.city}
+            initial={{ x: "100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 280, damping: 26 }}
+            style={{
+              position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 200,
+              width: "min(380px, 100vw)",
+              background: "rgba(255,255,255,0.97)", backdropFilter: "blur(20px)",
+              borderLeft: "1px solid #e2e8f0",
+              boxShadow: "-8px 0 40px rgba(0,0,0,0.12)",
+              display: "flex", flexDirection: "column",
+              overflowY: "auto",
+            }}
+          >
+            {/* Panel header */}
+            <div style={{ padding: "1.5rem 1.5rem 1rem", borderBottom: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4rem" }}>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
-                  <MapPin size={14} color="var(--accent)" />
-                  <span style={{ fontWeight: 800, fontSize: "1.25rem", color: "var(--text-primary)" }}>{selected}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.375rem" }}>
+                  <MapPin size={14} color="#2563eb" />
+                  <span style={{ fontWeight: 800, fontSize: "1.3rem", color: "#0f172a" }}>{selectedCity.city}</span>
                 </div>
-                <span style={{ fontSize: "0.7rem", color: "var(--text-muted)", fontWeight: 600 }}>{cityInfo.trend}</span>
+                <div style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600, marginTop: "0.125rem" }}>Real-time emission data</div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "2.5rem", fontWeight: 900, color: statusStyle.color, letterSpacing: "-0.04em", lineHeight: 1 }}>{cityInfo.aqi}</div>
-                <div style={{ fontSize: "0.65rem", color: "var(--text-muted)", fontWeight: 700, textTransform: "uppercase" }}>AQI</div>
+              <button onClick={() => { setSelectedCity(null); setQuery(""); setFlyTo(null); }}
+                style={{ background: "#f1f5f9", border: "none", borderRadius: "50%", width: 32, height: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <X size={15} color="#64748b" />
+              </button>
+            </div>
+
+            {/* AQI Big Number */}
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.875rem" }}>
+                <div>
+                  <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em" }}>Air Quality Index</div>
+                  <div style={{ fontSize: "3rem", fontWeight: 900, color: details.statusColor, letterSpacing: "-0.04em", lineHeight: 1 }}>{details.aqi}</div>
+                </div>
+                <div style={{
+                  padding: "0.5rem 1rem", borderRadius: "0.75rem",
+                  background: details.aqi > 200 ? "#ede9fe" : details.aqi > 100 ? "#fee2e2" : "#d1fae5",
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                }}>
+                  {details.aqi > 100 ? <AlertTriangle size={20} color={details.statusColor} /> : <CheckCircle size={20} color="#059669" />}
+                  <span style={{ fontSize: "0.65rem", fontWeight: 800, color: details.statusColor, marginTop: "0.25rem" }}>{details.status}</span>
+                </div>
+              </div>
+
+              {/* Health advice */}
+              <div style={{ background: "#f8fafc", borderRadius: "0.625rem", padding: "0.75rem 0.875rem" }}>
+                <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", marginBottom: "0.3rem" }}>Health Advisory</div>
+                <div style={{ fontSize: "0.8rem", color: "#475569", lineHeight: 1.6 }}>{details.advice}</div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.6rem 0.875rem", background: statusStyle.bg, borderRadius: "0.625rem", marginBottom: "1.25rem" }}>
-              {statusStyle.icon}
-              <span style={{ fontWeight: 700, fontSize: "0.85rem", color: statusStyle.color }}>{cityInfo.status}</span>
-              <span style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginLeft: "0.25rem" }}>
-                — {cityInfo.status === "Good" ? "Air quality is satisfactory." : cityInfo.status === "Moderate" ? "Sensitive groups should limit outdoor exposure." : cityInfo.status === "Unhealthy" ? "Everyone may experience health effects." : "Avoid outdoor activity completely."}
-              </span>
+            {/* Pollutant grid */}
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.875rem" }}>Pollutant Levels</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.625rem" }}>
+                {[
+                  { label: "PM2.5", value: selectedCity.pm25.toFixed(1), unit: "µg/m³", icon: <Droplets size={14} color="#2563eb" /> },
+                  { label: "CO",    value: details.co.toFixed(1),        unit: "mg/m³",  icon: <Wind size={14} color="#059669" />   },
+                  { label: "NO₂",   value: details.no2.toFixed(1),       unit: "ppb",   icon: <Wind size={14} color="#d97706" />   },
+                ].map(m => (
+                  <div key={m.label} style={{ background: "#f8fafc", borderRadius: "0.625rem", padding: "0.75rem", textAlign: "center" }}>
+                    <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.3rem" }}>{m.icon}</div>
+                    <div style={{ fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>{m.value}</div>
+                    <div style={{ fontSize: "0.58rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" }}>{m.label}</div>
+                    <div style={{ fontSize: "0.58rem", color: "#cbd5e1" }}>{m.unit}</div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.25rem" }}>
+            {/* AI Forecast teaser */}
+            <div style={{ padding: "1.25rem 1.5rem", borderBottom: "1px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                <TrendingUp size={16} color="#2563eb" />
+                <span style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f172a" }}>AI 30-Day Forecast</span>
+                <span style={{ marginLeft: "auto", fontSize: "0.65rem", fontWeight: 700, color: "#059669", background: "#d1fae5", padding: "0.125rem 0.5rem", borderRadius: "9999px" }}>LSTM Model</span>
+              </div>
+              <p style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.6, marginBottom: "1rem" }}>
+                Based on historical patterns, our LSTM deep learning model projects the next 30 days of CO emission levels for {selectedCity.city}.
+              </p>
+              <Link href={`/analytics?city=${selectedCity.city}`} style={{ textDecoration: "none" }}>
+                <button className="btn-primary" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem", padding: "0.75rem" }}>
+                  View Full Forecast <ArrowRight size={15} />
+                </button>
+              </Link>
+            </div>
+
+            {/* Status explanations */}
+            <div style={{ padding: "1.25rem 1.5rem" }}>
+              <div style={{ fontSize: "0.65rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "0.75rem" }}>AQI Scale Guide</div>
               {[
-                { label: "PM2.5", value: cityInfo.pm25, unit: "µg/m³", icon: <Droplets size={14} color="#2563eb" /> },
-                { label: "CO",    value: cityInfo.co,   unit: "mg/m³",  icon: <Wind size={14} color="#059669" /> },
-                { label: "NO₂",   value: cityInfo.no2,  unit: "ppb",   icon: <Thermometer size={14} color="#d97706" /> },
-              ].map(m => (
-                <div key={m.label} style={{ background: "var(--bg-subtle)", borderRadius: "0.625rem", padding: "0.875rem", textAlign: "center" }}>
-                  <div style={{ display: "flex", justifyContent: "center", marginBottom: "0.375rem" }}>{m.icon}</div>
-                  <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--text-primary)" }}>{m.value}</div>
-                  <div style={{ fontSize: "0.6rem", fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase" }}>{m.label} · {m.unit}</div>
+                { range: "0–50",   label: "Good",      color: "#059669" },
+                { range: "51–100", label: "Moderate",  color: "#d97706" },
+                { range: "101–200",label: "Unhealthy", color: "#dc2626" },
+                { range: "201+",   label: "Hazardous", color: "#7c3aed" },
+              ].map(r => (
+                <div key={r.label} style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: r.color, flexShrink: 0 }} />
+                  <span style={{ fontSize: "0.75rem", color: "#475569" }}><strong>{r.range}</strong> — {r.label}</span>
                 </div>
               ))}
             </div>
-
-            <Link href="/analytics" style={{ textDecoration: "none" }}>
-              <button className="btn-primary" style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-                View 30-Day AI Forecast for {selected} <ArrowRight size={15} />
-              </button>
-            </Link>
           </motion.div>
         )}
-      </section>
+      </AnimatePresence>
 
-      {/* ── Live Map ── */}
-      <section style={{ padding: "0 1.5rem 4rem", maxWidth: "1200px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "1rem" }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--text-primary)" }}>India Emission Heatmap</h2>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-secondary)", marginTop: "0.25rem" }}>Click any city marker to see live PM2.5 levels</p>
-        </div>
-        <div style={{ height: "560px", borderRadius: "1rem", overflow: "hidden", border: "1px solid var(--border)", boxShadow: "var(--shadow-md)" }}>
-          <LiveMap />
-        </div>
-      </section>
-
-    </main>
+      {/* ── CarbonScope title bottom-left ── */}
+      {!selectedCity && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          style={{
+            position: "absolute", bottom: "3rem", left: "1.5rem", zIndex: 100,
+            background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)",
+            padding: "0.875rem 1.25rem", borderRadius: "1rem",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.1)", border: "1px solid #e2e8f0",
+            maxWidth: "260px",
+          }}>
+          <div style={{ fontWeight: 900, fontSize: "1rem", color: "#0f172a", marginBottom: "0.25rem" }}>🌿 CarbonScope</div>
+          <div style={{ fontSize: "0.75rem", color: "#64748b", lineHeight: 1.5 }}>
+            India's AI-powered emission tracker. Search or click any city to see live air quality and 30-day forecast.
+          </div>
+        </motion.div>
+      )}
+    </div>
   );
 }

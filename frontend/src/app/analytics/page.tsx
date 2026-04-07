@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { motion } from "framer-motion";
 import { MapPin, TrendingUp, AlertCircle, CheckCircle } from "lucide-react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 
 const AnalyticsChart = dynamic(() => import("@/components/AnalyticsChart"), {
   ssr: false,
@@ -27,9 +28,11 @@ const CITY_STATS: Record<string, { aqi: number; pm25: number; forecast: string; 
   "Ahmedabad": { aqi: 182, pm25: 92.0,  forecast: "+3.8%",  status: "Unhealthy",  statusColor: "#dc2626", advice: "Limit outdoor time. Children and elderly should stay indoors." },
 };
 
-export default function Analytics() {
-  const [selectedCity, setSelectedCity] = useState("Delhi");
-  const city = CITY_STATS[selectedCity];
+function AnalyticsContent() {
+  const searchParams = useSearchParams();
+  const cityFromUrl = searchParams.get("city") || "Delhi";
+  const [selectedCity, setSelectedCity] = useState(cityFromUrl);
+  const city = CITY_STATS[selectedCity] || CITY_STATS["Delhi"];
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)", paddingTop: "5.5rem", paddingBottom: "4rem" }}>
@@ -163,5 +166,13 @@ export default function Analytics() {
 
       </div>
     </main>
+  );
+}
+
+export default function Analytics() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading…</div>}>
+      <AnalyticsContent />
+    </Suspense>
   );
 }
