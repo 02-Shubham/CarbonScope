@@ -7,16 +7,22 @@ import {
 
 type DataPoint = { name: string; current?: number; predicted?: number; best_case?: number; worst_case?: number };
 
-const DEMO_PREDICTIONS = [53.1,54.2,55.8,54.6,56.9,58.1,57.3,59.0,60.2,59.4,61.0,62.3,61.8,63.2,64.5,63.9,65.1,66.4,65.7,67.0,68.2,67.5,69.0,70.1,69.4,71.0,72.3,71.6,73.0,74.2];
+const DEMO_PREDICTIONS = [0.739, 0.745, 0.760, 0.752, 0.771, 0.785, 0.765, 0.790, 0.812, 0.804, 0.820, 0.843, 0.818, 0.832, 0.855, 0.849, 0.851, 0.884, 0.867, 0.890, 0.902, 0.895, 0.910, 0.931, 0.924, 0.940, 0.953, 0.946, 0.960, 0.972];
+
+const getFormattedDate = (daysOffset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysOffset);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
 const HISTORICAL_SEED: DataPoint[] = [
-  { name: "Day -7", current: 48.3 },
-  { name: "Day -6", current: 50.1 },
-  { name: "Day -5", current: 49.8 },
-  { name: "Day -4", current: 51.6 },
-  { name: "Day -3", current: 50.2 },
-  { name: "Day -2", current: 52.8 },
-  { name: "Day -1", current: 53.1 },
+  { name: getFormattedDate(-6), current: 0.738 },
+  { name: getFormattedDate(-5), current: 0.748 },
+  { name: getFormattedDate(-4), current: 0.740 },
+  { name: getFormattedDate(-3), current: 0.723 },
+  { name: getFormattedDate(-2), current: 0.759 },
+  { name: getFormattedDate(-1), current: 0.755 },
+  { name: getFormattedDate(0),  current: 0.739 },
 ];
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -42,6 +48,7 @@ export default function AnalyticsChart() {
   const [loading, setLoading] = useState(true);
   const [isDemo, setIsDemo] = useState(false);
   const [modelUsed, setModelUsed] = useState<string>("");
+  const [insights, setInsights] = useState<any>(null);
   
   // Simulation Controls
   const [isSimulating, setIsSimulating] = useState(false);
@@ -59,12 +66,15 @@ export default function AnalyticsChart() {
             const json = await res.json();
             
             if (json.prediction_co_index) {
-                const combined: DataPoint[] = [...HISTORICAL_SEED];
+                const combined: DataPoint[] = HISTORICAL_SEED.map(p => ({...p}));
+                combined[combined.length - 1].predicted = combined[combined.length - 1].current;
+                
                 json.prediction_co_index.forEach((val: number, idx: number) => {
-                    combined.push({ name: `Day +${idx + 1}`, predicted: val });
+                    combined.push({ name: getFormattedDate(idx + 1), predicted: val });
                 });
                 setData(combined);
-                setModelUsed(json.model_used || "LSTM");
+                setModelUsed(json.model_used || "LSTM Deep Learning Engine");
+                if (json.insights) setInsights(json.insights);
             } else { throw new Error("Unexpected API shape"); }
         } else {
             // Generative AI Simulation using TimeGAN
@@ -74,28 +84,38 @@ export default function AnalyticsChart() {
             const json = await res.json();
             
             if (json.best_case && json.worst_case) {
-                const combined: DataPoint[] = [...HISTORICAL_SEED];
+                const combined: DataPoint[] = HISTORICAL_SEED.map(p => ({...p}));
+                combined[combined.length - 1].worst_case = combined[combined.length - 1].current;
+                combined[combined.length - 1].best_case = combined[combined.length - 1].current;
+
                 json.worst_case.forEach((val: number, idx: number) => {
                     combined.push({ 
-                        name: `Day +${idx + 1}`, 
+                        name: getFormattedDate(idx + 1), 
                         worst_case: val,
                         best_case: json.best_case[idx]
                     });
                 });
                 setData(combined);
-                setModelUsed(json.model_used || "TimeGAN");
+                setModelUsed(json.model_used || "TimeGAN Generative AI");
+                setInsights(null);
             } else { throw new Error("Unexpected API shape"); }
         }
         setIsDemo(false);
       } catch {
         // Fallback demo data
-        const fallback: DataPoint[] = [...HISTORICAL_SEED];
+        const fallback: DataPoint[] = HISTORICAL_SEED.map(p => ({...p}));
+        if (isSimulating) {
+            fallback[fallback.length - 1].worst_case = fallback[fallback.length - 1].current;
+            fallback[fallback.length - 1].best_case = fallback[fallback.length - 1].current;
+        } else {
+            fallback[fallback.length - 1].predicted = fallback[fallback.length - 1].current;
+        }
+
         DEMO_PREDICTIONS.forEach((val, idx) => {
           if (isSimulating) {
-              // Fake simulated bounds
-              fallback.push({ name: `Day +${idx + 1}`, worst_case: val + 2.5, best_case: val * energyFactor });
+              fallback.push({ name: getFormattedDate(idx + 1), worst_case: val + 0.1, best_case: val * energyFactor });
           } else {
-              fallback.push({ name: `Day +${idx + 1}`, predicted: val });
+              fallback.push({ name: getFormattedDate(idx + 1), predicted: val });
           }
         });
         setData(fallback);
@@ -211,6 +231,29 @@ export default function AnalyticsChart() {
             </AreaChart>
           </ResponsiveContainer>
       </div>
+      
+      {insights && !isSimulating && (
+          <div style={{ marginTop: "1rem", padding: "0.75rem", background: "var(--bg-subtle)", borderRadius: "0.5rem", border: "1px solid var(--border)", display: "flex", gap: "1.5rem", fontSize: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>AI Predicted Trend:</span>
+                  <span style={{ color: insights["30_day_trend"] === "decreasing" ? "var(--green)" : "var(--amber)", fontWeight: 700, textTransform: "capitalize", display: "inline-flex", alignItems: "center", background: "var(--bg)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>
+                      {insights["30_day_trend"]} {insights["30_day_trend"] === "decreasing" ? "↓" : "↑"}
+                  </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Net Change:</span>
+                  <span style={{ fontWeight: 700, background: "var(--bg)", padding: "0.2rem 0.5rem", borderRadius: "4px", color: insights["forecast_change_percent"] <= 0 ? "var(--green)" : "var(--amber)" }}>
+                      {insights["forecast_change_percent"] > 0 ? "+" : ""}{insights["forecast_change_percent"].toFixed(1)}%
+                  </span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>Top Correlated Factors:</span>
+                  <span style={{ fontWeight: 700, background: "var(--bg)", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>
+                      {insights["major_correlated_factors"].join(", ")}
+                  </span>
+              </div>
+          </div>
+      )}
     </div>
   );
 }

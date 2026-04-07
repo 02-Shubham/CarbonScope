@@ -24,7 +24,7 @@ async def root():
 async def predict_emissions(days: int = 30):
     """Run LSTM deep learning forecast for N days ahead."""
     try:
-        from predict import load_environment, forecast_future
+        from predict import load_environment, forecast_future, generate_insights
 
         scaler, model, df = load_environment()
 
@@ -35,11 +35,13 @@ async def predict_emissions(days: int = 30):
         target_idx = feature_cols.index('CO')
 
         preds = forecast_future(model, scaler, df, feature_cols, target_idx, num_days=days)
+        insights = generate_insights(df, preds)
 
         return {
             "status": "success",
             "prediction_days": days,
             "prediction_co_index": preds,
+            "insights": insights,
             "model_used": "LSTM Deep Learning Engine",
         }
     except Exception as e:
