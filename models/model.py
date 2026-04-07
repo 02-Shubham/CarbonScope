@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, LSTM, Dropout, Input, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Flatten
-
+from tensorflow.keras.layers import Dense, LSTM, GRU, Dropout, Input, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Flatten
 def build_lstm_model(input_shape):
     """
     Builds a robust LSTM-based deep learning model for large time-series.
@@ -19,7 +18,26 @@ def build_lstm_model(input_shape):
     model.compile(optimizer='adam', loss='mse', metrics=['mae'])
     return model
 
+def build_gru_model(input_shape):
+    """
+    Builds a GRU-based deep learning model as promised in the methodology.
+    Slightly faster to train than LSTM and useful for comparison.
+    """
+    model = Sequential([
+        Input(shape=input_shape),
+        GRU(128, return_sequences=True),
+        Dropout(0.3),
+        GRU(64),
+        Dropout(0.3),
+        Dense(32, activation='relu'),
+        Dense(1, activation='linear')
+    ])
+    
+    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    return model
+
 def build_transformer_model(input_shape):
+
     """
     Builds a robust Time-Series Transformer model for capturing massive temporal dependencies.
     """
