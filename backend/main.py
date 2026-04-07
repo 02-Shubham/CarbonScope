@@ -126,3 +126,17 @@ async def get_insights():
         return {"status": "success", "insights": insights}
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/live-map")
+async def get_live_map():
+    """
+    Returns geographical mapping data for the frontend Mapbox visualization.
+    Provides coordinates, PM2.5 levels, and zone statuses.
+    """
+    try:
+        from services.open_aq import OpenAQService
+        aq_service = OpenAQService()
+        map_data = aq_service.get_india_map_data()
+        return {"status": "success", "data": map_data}
+    except Exception as e:
+        return {"error": str(e), "data": []}
