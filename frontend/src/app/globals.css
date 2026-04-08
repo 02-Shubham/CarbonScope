@@ -173,3 +173,29 @@ html, body {
 }
 .animate-fade-up { animation: fadeUp 0.5s ease forwards; }
 .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+
+/* ─── Mobile Responsiveness ─── */
+@media (max-width: 640px) {
+  /* Touch targets */
+  button, a { -webkit-tap-highlight-color: transparent; }
+
+  /* Navbar pill stays on screen */
+  .navbar { border-radius: 0.75rem; }
+
+  /* Stats strip: force single column on very small screens */
+  .stats-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Prevent text overflow */
+  h1, h2, h3 { word-break: break-word; }
+
+  /* Page container adjustments */
+  .page-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 5rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .stats-grid { grid-template-columns: 1fr !important; }
+}

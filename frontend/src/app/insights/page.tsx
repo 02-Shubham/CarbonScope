@@ -43,14 +43,21 @@ export default function Insights() {
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)", paddingTop: "5.5rem", paddingBottom: "5rem" }}>
-      <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1.5rem" }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .insights-h1 { font-size: 1.5rem !important; }
+          .insights-tips-grid { grid-template-columns: 1fr !important; }
+          .insights-stats-row { flex-wrap: wrap; gap: 0.5rem !important; }
+        }
+      `}</style>
+      <div style={{ maxWidth: "52rem", margin: "0 auto", padding: "0 1rem" }}>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "2.5rem" }}>
           <span className="badge badge-accent" style={{ marginBottom: "0.75rem" }}>
             <BookOpen size={10} /> Learn More
           </span>
-          <h1 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
+          <h1 className="insights-h1" style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
             Understanding Air Quality & AI
           </h1>
           <p style={{ color: "var(--text-secondary)", marginTop: "0.5rem", fontSize: "0.95rem", lineHeight: 1.65 }}>
@@ -142,7 +149,7 @@ export default function Insights() {
           <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text-primary)", marginBottom: "1rem" }}>
             What Can I Do to Help?
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(18rem, 1fr))", gap: "0.875rem" }}>
+          <div className="insights-tips-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))", gap: "0.875rem" }}>
             {[
               { emoji: "🚶", title: "Use public transport", desc: "Transport is responsible for 25% of urban emissions. Even one fewer car trip per week makes a measurable difference." },
               { emoji: "🌱", title: "Plant trees locally", desc: "A single mature tree absorbs 22 kg of CO₂ per year. Urban tree cover directly reduces city-level AQI scores." },

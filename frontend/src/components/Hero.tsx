@@ -41,9 +41,19 @@ const features = [
 export const Hero = () => {
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg)" }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .hero-section { padding: 5.5rem 1rem 3rem !important; }
+          .hero-buttons { flex-direction: column !important; align-items: stretch !important; }
+          .hero-buttons a, .hero-buttons button { width: 100%; justify-content: center; }
+          .hero-stats { padding: 0 1rem 3rem !important; }
+          .hero-features { padding: 0 1rem 4rem !important; }
+          .hero-how-it-works h2 { font-size: 1.4rem !important; }
+        }
+      `}</style>
 
       {/* ── Hero Section ── */}
-      <section style={{
+      <section className="hero-section" style={{
         display: "flex", flexDirection: "column", alignItems: "center",
         textAlign: "center", padding: "8rem 1.5rem 5rem",
       }}>
@@ -103,6 +113,7 @@ export const Hero = () => {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
+          className="hero-buttons"
           style={{ display: "flex", gap: "0.875rem", flexWrap: "wrap", justifyContent: "center" }}
         >
           <Link href="/analytics" style={{ textDecoration: "none" }}>
@@ -137,8 +148,8 @@ export const Hero = () => {
       </section>
 
       {/* ── Stats Strip ── */}
-      <section style={{ padding: "0 1.5rem 4rem", maxWidth: "64rem", margin: "0 auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(14rem, 1fr))", gap: "1rem" }}>
+      <section className="hero-stats" style={{ padding: "0 1.5rem 4rem", maxWidth: "64rem", margin: "0 auto" }}>
+        <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(11rem, 1fr))", gap: "1rem" }}>
           {stats.map((s, i) => (
             <motion.div
               key={s.label}
@@ -163,8 +174,8 @@ export const Hero = () => {
       </section>
 
       {/* ── Features Grid ── */}
-      <section style={{ padding: "0 1.5rem 6rem", maxWidth: "64rem", margin: "0 auto" }}>
-        <div style={{ textAlign: "center", marginBottom: "3rem" }}>
+      <section className="hero-features" style={{ padding: "0 1.5rem 6rem", maxWidth: "64rem", margin: "0 auto" }}>
+        <div className="hero-how-it-works" style={{ textAlign: "center", marginBottom: "3rem" }}>
           <h2 style={{ fontSize: "1.875rem", fontWeight: 800, letterSpacing: "-0.03em", color: "var(--text-primary)" }}>
             How It Works
           </h2>

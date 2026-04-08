@@ -130,11 +130,18 @@ function AnalyticsContent() {
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--bg)", paddingTop: "5.5rem", paddingBottom: "4rem" }}>
-      <div style={{ maxWidth: "76rem", margin: "0 auto", padding: "0 1.5rem" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .analytics-grid { grid-template-columns: 1fr !important; }
+          .analytics-h1 { font-size: 1.5rem !important; }
+          .analytics-search { max-width: 100% !important; }
+        }
+      `}</style>
+      <div style={{ maxWidth: "76rem", margin: "0 auto", padding: "0 1rem" }}>
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: "1.5rem" }}>
-          <h1 style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.035em", color: "var(--text-primary)" }}>
+          <h1 className="analytics-h1" style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.035em", color: "var(--text-primary)" }}>
             Air Quality Forecast
           </h1>
           <p style={{ color: "var(--text-secondary)", marginTop: "0.375rem", fontSize: "0.9rem" }}>
@@ -145,6 +152,7 @@ function AnalyticsContent() {
         {/* ── Search Bar ── */}
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
+          className="analytics-search"
           style={{ position: "relative", marginBottom: "1.75rem", maxWidth: "480px" }}>
 
           {/* Input */}
@@ -251,7 +259,7 @@ function AnalyticsContent() {
         </motion.div>
 
         {/* Chart + sidebar */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "1.25rem", alignItems: "start" }}>
+        <div className="analytics-grid" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "1.25rem", alignItems: "start" }}>
           <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.15 }}
             className="card" style={{ padding: "1.75rem" }}>
             <div style={{ marginBottom: "1.25rem" }}>

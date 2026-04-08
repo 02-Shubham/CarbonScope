@@ -130,6 +130,14 @@ export default function Home() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden" }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .home-search-bar { top: 5rem !important; }
+          .home-city-panel { width: 100vw !important; border-left: none !important; }
+          .home-bottom-widget { display: none !important; }
+          .home-pro-tip { font-size: 0.65rem !important; }
+        }
+      `}</style>
 
       {/* ── Full-Screen Map ── */}
       <div style={{ position: "absolute", inset: 0, zIndex: 0 }}>
@@ -137,7 +145,7 @@ export default function Home() {
       </div>
 
       {/* ── Floating Search Bar ── */}
-      <div style={{
+      <div className="home-search-bar" style={{
         position: "absolute", top: "6rem", left: "50%", transform: "translateX(-50%)",
         zIndex: 100, width: "min(480px, calc(100vw - 2rem))",
       }}>
@@ -218,6 +226,7 @@ export default function Home() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", stiffness: 280, damping: 26 }}
+            className="home-city-panel"
             style={{
               position: "absolute", top: 0, right: 0, bottom: 0, zIndex: 200,
               width: "min(380px, 100vw)",
@@ -325,6 +334,7 @@ export default function Home() {
       {/* ── CarbonScope title bottom-left ── */}
       {!selectedCity && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+          className="home-bottom-widget"
           style={{
             position: "absolute", bottom: "3rem", left: "1.5rem", zIndex: 100,
             background: "rgba(255,255,255,0.92)", backdropFilter: "blur(12px)",
