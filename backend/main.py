@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 import sys
 import os
+
+# Load environment variables from .env
+load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # Make models/ importable
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'models')))
@@ -132,13 +136,20 @@ async def get_insights():
 @app.get("/live-map")
 async def get_live_map():
     """
-    Returns geographical mapping data for the frontend Mapbox visualization.
-    Provides coordinates, PM2.5 levels, and zone statuses.
+    Returns geographical mapping data for the frontend Leaflet map.
+    Fetches real-time PM2.5, CO, and NO2 from OpenAQ v3 API.
+    Falls back to realistic mock data if the API is unavailable.
     """
     try:
         from services.open_aq import OpenAQService
         aq_service = OpenAQService()
         map_data = aq_service.get_india_map_data()
-        return {"status": "success", "data": map_data}
+        live_count = sum(1 for d in map_data if d.get("source") == "live")
+        return {
+            "status": "success",
+            "data": map_data,
+            "live_count": live_count,
+            "total": len(map_data),
+        }
     except Exception as e:
         return {"error": str(e), "data": []}
